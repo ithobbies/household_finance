@@ -45,50 +45,82 @@ class Main(tk.Frame):
         self.tree.column('costs', width=150, anchor=tk.CENTER)
         self.tree.column('total', width=100, anchor=tk.CENTER)
 
-        self.tree.heading('ID', text='ID')
-        self.tree.heading('description', text='Наименование')
-        self.tree.heading('costs', text='Статья дохода/расхода')
-        self.tree.heading('total', text='Сумма')
+        self.tree.heading('ID', text='ID', command=self.sort_records_by_id)
+        self.tree.heading('description', text='Наименование', command=self.sort_records_by_description)
+        self.tree.heading('costs', text='Статья дохода/расхода', command=self.sort_records_by_costs)
+        self.tree.heading('total', text='Сумма', command=self.sort_records_by_total)
 
         self.tree.pack(side=tk.LEFT)
 
         self.scroll = tk.Scrollbar(self, orient = 'vertical', command = self.tree.yview)
         self.scroll.pack(side=tk.RIGHT, fill=tk.Y)
         self.tree.configure(yscrollcommand = self.scroll.set)
-        
+   
+    #Добавление данных в базу данных        
     def records(self, description, costs, total):
         self.db.insert_data(description, costs, total)
         self.view_records()
 
+    #Релактирование\обновление данных записи
     def update_record(self, description, costs, total):
         self.db.c.execute('''UPDATE finance SET description=?, costs=?, total=? WHERE ID=?''',
                           (description, costs, total, self.tree.set(self.tree.selection()[0], '#1')))
         self.db.conn.commit()
         self.view_records()
 
+    #Отображение содержимого базы данных
     def view_records(self):
         self.db.c.execute('''SELECT * FROM finance''')
         [self.tree.delete(i) for i in self.tree.get_children()]
         [self.tree.insert('', 'end', values=row) for row in self.db.c.fetchall()]
 
+    #Удаление записей (с возможностью массового удаления)
     def delete_records(self):
         for selection_item in self.tree.selection():
             self.db.c.execute('''DELETE FROM finance WHERE id=?''', (self.tree.set(selection_item, '#1'),))
         self.db.conn.commit()
         self.view_records()
 
+    #Поиск по наименованию (полю description)
     def search_records(self, description):
         description = ('%' + description + '%',)
         self.db.c.execute('''SELECT * FROM finance WHERE description LIKE ?''', description)
         [self.tree.delete(i) for i in self.tree.get_children()]
         [self.tree.insert('', 'end', values=row) for row in self.db.c.fetchall()]
 
+    #Сортировка по полю ID
+    def sort_records_by_id(self):
+        self.db.c.execute('SELECT * FROM finance ORDER BY ID')
+        [self.tree.delete(i) for i in self.tree.get_children()]
+        [self.tree.insert('', 'end', values=row) for row in self.db.c.fetchall()]
+
+    #Сортировка по полю decription
+    def sort_records_by_description(self):
+        self.db.c.execute('SELECT * FROM finance ORDER BY description')
+        [self.tree.delete(i) for i in self.tree.get_children()]
+        [self.tree.insert('', 'end', values=row) for row in self.db.c.fetchall()]
+
+    #Сортировка по полю costs
+    def sort_records_by_costs(self):
+        self.db.c.execute('SELECT * FROM finance ORDER BY costs')
+        [self.tree.delete(i) for i in self.tree.get_children()]
+        [self.tree.insert('', 'end', values=row) for row in self.db.c.fetchall()]
+
+    #Сортировка по полю total
+    def sort_records_by_total(self):
+        self.db.c.execute('SELECT * FROM finance ORDER BY total')
+        [self.tree.delete(i) for i in self.tree.get_children()]
+        [self.tree.insert('', 'end', values=row) for row in self.db.c.fetchall()]
+
+    #Вызов окна добавления данных
     def open_dialog(self):
         Child()
 
+    #Вызов окна редактирования данных
     def open_update_dialog(self):
         Update()
 
+    #Вызов окна поиска по наименованию (полю description)
     def open_search_dialog(self):
         Search()
 
